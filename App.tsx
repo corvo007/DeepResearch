@@ -160,7 +160,7 @@ const App: React.FC = () => {
                 
                 <div className={`
                     w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300 ease-in-out
-                    ${showSettings ? 'max-h-64 opacity-100 p-5' : 'max-h-0 opacity-0 p-0 border-0'}
+                    ${showSettings ? 'max-h-[800px] opacity-100 p-5' : 'max-h-0 opacity-0 p-0 border-0'}
                 `}>
                     <div className="flex flex-col sm:flex-row justify-center gap-8 flex-wrap">
                         
