@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { researchTopic } from './services/geminiService';
-import { ResearchResult, ResearchConfig, ResearchFocus, ArticleCount, Language } from './types';
+import { ResearchResult, ResearchConfig, ResearchFocus, ArticleCount, Language, HistoryItem } from './types';
 import { ArticleCard } from './components/ArticleCard';
 import { TimelineSection } from './components/TimelineSection';
 import { ChatWidget } from './components/ChatWidget';
-import { Search, Cpu, Loader2, SlidersHorizontal, FileText } from './components/Icons';
+import { Search, Cpu, Loader2, SlidersHorizontal, FileText, History } from './components/Icons';
+import { HistorySidebar } from './components/HistorySidebar';
 
 const App: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -14,6 +15,75 @@ const App: React.FC = () => {
   const [config, setConfig] = useState<ResearchConfig>({ focus: 'balanced', count: 10, language: 'en' });
   const [showSettings, setShowSettings] = useState(false);
   const [timelineImage, setTimelineImage] = useState<string | null>(null);
+  
+  // History State
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [currentResearchId, setCurrentResearchId] = useState<string | null>(null);
+
+  // Load history on mount
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('deep_research_history');
+    if (savedHistory) {
+      try {
+        setHistoryItems(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error("Failed to parse history", e);
+      }
+    }
+  }, []);
+
+  const saveToHistory = (newItem: HistoryItem) => {
+    const updatedHistory = [newItem, ...historyItems].slice(0, 15); // Keep last 15 items
+    setHistoryItems(updatedHistory);
+    try {
+      localStorage.setItem('deep_research_history', JSON.stringify(updatedHistory));
+    } catch (e) {
+      console.warn("LocalStorage full, could not save history");
+    }
+  };
+
+  const updateHistoryImage = (id: string, imageUrl: string) => {
+    const updatedHistory = historyItems.map(item => 
+      item.id === id ? { ...item, timelineImage: imageUrl } : item
+    );
+    setHistoryItems(updatedHistory);
+    try {
+      localStorage.setItem('deep_research_history', JSON.stringify(updatedHistory));
+    } catch (e) {
+      console.warn("LocalStorage full, could not save history image");
+    }
+  };
+
+  const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updatedHistory = historyItems.filter(item => item.id !== id);
+    setHistoryItems(updatedHistory);
+    localStorage.setItem('deep_research_history', JSON.stringify(updatedHistory));
+    
+    if (currentResearchId === id) {
+      setResult(null);
+      setTimelineImage(null);
+      setCurrentResearchId(null);
+    }
+  };
+
+  const clearHistory = () => {
+    if (confirm('Are you sure you want to clear all history?')) {
+      setHistoryItems([]);
+      localStorage.removeItem('deep_research_history');
+    }
+  };
+
+  const loadHistoryItem = (item: HistoryItem) => {
+    setQuery(item.topic);
+    setResult(item.result);
+    setTimelineImage(item.timelineImage);
+    setConfig(item.config);
+    setCurrentResearchId(item.id);
+    setHistoryOpen(false);
+    setShowSettings(false);
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,14 +94,36 @@ const App: React.FC = () => {
     setResult(null);
     setTimelineImage(null); // Reset timeline
     setShowSettings(false); // Collapse settings on search
+    setCurrentResearchId(null);
 
     try {
       const data = await researchTopic(query, config);
       setResult(data);
+      
+      // Save to history
+      const newId = Date.now().toString();
+      const newItem: HistoryItem = {
+        id: newId,
+        timestamp: Date.now(),
+        topic: query,
+        result: data,
+        timelineImage: null,
+        config: config
+      };
+      setCurrentResearchId(newId);
+      saveToHistory(newItem);
+
     } catch (err: any) {
       setError("Failed to research topic. Please check your API key and try again.");
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleTimelineGenerated = (url: string) => {
+    setTimelineImage(url);
+    if (currentResearchId) {
+      updateHistoryImage(currentResearchId, url);
     }
   };
 
@@ -90,25 +182,42 @@ const App: React.FC = () => {
             </div>
             <span className="font-bold text-xl tracking-tight text-slate-900">DeepResearch.AI</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             {result && (
-              <div className="flex items-center gap-2 mr-4">
-                <button 
-                  onClick={handleExportMarkdown}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-blue-600 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-                  title="Export as Markdown"
-                >
-                   <FileText size={18} />
-                   <span>Export Markdown</span>
-                </button>
-              </div>
+              <button 
+                onClick={handleExportMarkdown}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-blue-600 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                title="Export as Markdown"
+              >
+                 <FileText size={18} />
+                 <span className="hidden sm:inline">Export</span>
+              </button>
             )}
-            <div className="text-xs font-medium px-3 py-1 bg-slate-100 rounded-full text-slate-500 hidden sm:block">
-              Powered by Gemini 3 Pro
+            
+            <button 
+              onClick={() => setHistoryOpen(true)}
+              className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-blue-600 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium border border-slate-200"
+              title="History"
+            >
+              <History size={18} />
+              <span className="hidden sm:inline">History</span>
+            </button>
+
+            <div className="text-xs font-medium px-3 py-1 bg-slate-100 rounded-full text-slate-500 hidden md:block">
+              Gemini 3 Pro
             </div>
           </div>
         </div>
       </header>
+
+      <HistorySidebar 
+        isOpen={historyOpen} 
+        onClose={() => setHistoryOpen(false)}
+        historyItems={historyItems}
+        onSelect={loadHistoryItem}
+        onDelete={deleteHistoryItem}
+        onClear={clearHistory}
+      />
 
       <main className="max-w-6xl mx-auto px-4 mt-12 print:mt-4 print:max-w-none">
         
@@ -284,7 +393,7 @@ const App: React.FC = () => {
                 visualPrompt={result.suggestedVisualPrompt} 
                 topic={result.topic} 
                 imageUrl={timelineImage}
-                onImageGenerated={setTimelineImage}
+                onImageGenerated={handleTimelineGenerated}
                 language={config.language}
               />
             </section>

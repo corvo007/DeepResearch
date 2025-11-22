@@ -32,3 +32,12 @@ export interface ResearchConfig {
   count: ArticleCount;
   language: Language;
 }
+
+export interface HistoryItem {
+  id: string;
+  timestamp: number;
+  topic: string;
+  result: ResearchResult;
+  timelineImage: string | null;
+  config: ResearchConfig;
+}
