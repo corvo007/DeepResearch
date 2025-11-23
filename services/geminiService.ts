@@ -63,7 +63,18 @@ export const researchTopic = async (topic: string, config: ResearchConfig): Prom
   IMPORTANT LANGUAGE REQUIREMENT:
   The user has requested the output in ${targetLanguage}.
   - The "summary", "ai_summary", and "significance" fields MUST be written in ${targetLanguage}.
-  - The "title" and "authors" should generally remain in their original language (usually English for science) unless there is a standard translation.
+  - The "title", "authors", and "journal" should generally remain in their original language (usually English for science) unless there is a standard translation.
+
+  STRICT PAPER SELECTION CRITERIA:
+  1. ARTICLE TYPE: 
+     - Select ONLY original "Research Articles" (Primary Research).
+     - STRICTLY EXCLUDE "Review Articles" (systematic reviews, literature reviews).
+     - STRICTLY EXCLUDE "Letters" (short communications, letters to the editor), "Editorials", and "Perspectives".
+  
+  2. QUALITY & IMPACT:
+     - Prioritize papers published in top-tier, high-impact journals (e.g., Nature, Science, Cell, PNAS, or top conferences/journals specific to the field).
+     - Prioritize papers with high citation counts relative to their publication year.
+     - Use your academic judgment to select papers that represent true milestones in scientific progress.
   
   ${focusInstruction}
   
@@ -75,7 +86,8 @@ export const researchTopic = async (topic: string, config: ResearchConfig): Prom
 
   const prompt = `Conduct deep research on the field: "${topic}".
   
-  Use Google Search to verify authors, titles, publication dates, and find links.
+  Use Google Search to verify authors, titles, publication dates, article types, journal names, and citation impact.
+  Ensure ALL selected papers are Primary Research Articles. Do not include Reviews.
   
   TARGET ARTICLE COUNT: ${config.count}
   You must aim to find ${config.count} distinct, high-quality papers. 
@@ -89,10 +101,11 @@ export const researchTopic = async (topic: string, config: ResearchConfig): Prom
     "articles": [
       {
         "title": "Exact Title",
-        "authors": "List of authors",
+        "authors": "List of authors (comma separated)",
+        "journal": "Full name of the journal where it was published (e.g. Nature, NeurIPS)",
         "publication_date": "YYYY-MM-DD (or YYYY if exact date unknown)",
         "ai_summary": "Brief summary of the content in ${targetLanguage}",
-        "significance": "Why this paper is important/status in the field in ${targetLanguage}",
+        "significance": "Why this paper is important (mention journal/impact if relevant) in ${targetLanguage}",
         "url": "URL to the paper (or search result link)"
       }
     ]
@@ -198,7 +211,7 @@ export const getResearchChatSession = (context: ResearchResult) => {
     ${context.summary}
     
     KEY ARTICLES (Foundational & Recent):
-    ${context.articles.map((a, i) => `${i+1}. "${a.title}" (${a.publication_date}) by ${a.authors}. Significance: ${a.significance}. Summary: ${a.ai_summary}`).join('\n')}
+    ${context.articles.map((a, i) => `${i+1}. "${a.title}" (${a.publication_date}) by ${a.authors}. Journal: ${a.journal || 'Unknown'}. Significance: ${a.significance}. Summary: ${a.ai_summary}`).join('\n')}
   `;
 
   const systemInstruction = `You are an intelligent research assistant helping a user explore the topic: "${context.topic}".

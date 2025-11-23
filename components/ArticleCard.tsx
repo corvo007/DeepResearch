@@ -7,6 +7,17 @@ interface ArticleCardProps {
 }
 
 export const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
+  
+  const formatAuthors = (authors: string) => {
+    if (!authors) return '';
+    // Split by common separators just in case, mostly commas
+    const authorList = authors.split(/,\s*/);
+    if (authorList.length <= 3) {
+      return authors;
+    }
+    return `${authorList.slice(0, 3).join(', ')} et al.`;
+  };
+
   return (
     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full">
       <div className="flex justify-between items-start mb-3">
@@ -25,14 +36,27 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
         )}
       </div>
       
-      <h3 className="text-lg font-bold text-slate-900 mb-1 leading-tight">{article.title}</h3>
-      <div className="text-sm text-slate-500 mb-4 flex flex-wrap gap-x-2">
-        <span className="italic">{article.authors}</span>
+      <h3 className="text-lg font-bold text-slate-900 mb-2 leading-tight">{article.title}</h3>
+      
+      {/* Meta Info Section */}
+      <div className="mb-4 flex flex-col gap-1">
+        {/* Authors (Truncated) */}
+        <div className="text-sm text-slate-600 italic" title={article.authors}>
+           {formatAuthors(article.authors)}
+        </div>
+        
+        {/* Journal */}
+        {article.journal && (
+          <div className="text-sm font-semibold text-slate-800">
+            {article.journal}
+          </div>
+        )}
+
+        {/* Date */}
         {article.publication_date && (
-          <>
-            <span className="text-slate-300">•</span>
-            <span className="font-medium text-slate-600">{article.publication_date}</span>
-          </>
+          <div className="text-sm font-medium text-slate-500">
+            {article.publication_date}
+          </div>
         )}
       </div>
       

@@ -3,6 +3,7 @@ export type Language = 'en' | 'zh' | 'ja';
 export interface Article {
   title: string;
   authors: string;
+  journal?: string;
   publication_date: string;
   ai_summary: string;
   significance: string;
