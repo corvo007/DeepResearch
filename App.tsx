@@ -6,6 +6,7 @@ import { TimelineSection } from './components/TimelineSection';
 import { ChatWidget } from './components/ChatWidget';
 import { Search, Cpu, Loader2, SlidersHorizontal, FileText, History } from './components/Icons';
 import { HistorySidebar } from './components/HistorySidebar';
+import { LiteratureReviewSection } from './components/LiteratureReviewSection';
 
 const App: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -15,6 +16,7 @@ const App: React.FC = () => {
   const [config, setConfig] = useState<ResearchConfig>({ focus: 'balanced', count: 10, language: 'en' });
   const [showSettings, setShowSettings] = useState(false);
   const [timelineImage, setTimelineImage] = useState<string | null>(null);
+  const [literatureReview, setLiteratureReview] = useState<string | null>(null);
   
   // History State
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -43,15 +45,15 @@ const App: React.FC = () => {
     }
   };
 
-  const updateHistoryImage = (id: string, imageUrl: string) => {
+  const updateHistoryItem = (id: string, updates: Partial<HistoryItem>) => {
     const updatedHistory = historyItems.map(item => 
-      item.id === id ? { ...item, timelineImage: imageUrl } : item
+      item.id === id ? { ...item, ...updates } : item
     );
     setHistoryItems(updatedHistory);
     try {
       localStorage.setItem('deep_research_history', JSON.stringify(updatedHistory));
     } catch (e) {
-      console.warn("LocalStorage full, could not save history image");
+      console.warn("LocalStorage full, could not save history updates");
     }
   };
 
@@ -64,6 +66,7 @@ const App: React.FC = () => {
     if (currentResearchId === id) {
       setResult(null);
       setTimelineImage(null);
+      setLiteratureReview(null);
       setCurrentResearchId(null);
     }
   };
@@ -79,6 +82,7 @@ const App: React.FC = () => {
     setQuery(item.topic);
     setResult(item.result);
     setTimelineImage(item.timelineImage);
+    setLiteratureReview(item.literatureReview || null);
     setConfig(item.config);
     setCurrentResearchId(item.id);
     setHistoryOpen(false);
@@ -93,6 +97,7 @@ const App: React.FC = () => {
     setError(null);
     setResult(null);
     setTimelineImage(null); // Reset timeline
+    setLiteratureReview(null); // Reset review
     setShowSettings(false); // Collapse settings on search
     setCurrentResearchId(null);
 
@@ -108,6 +113,7 @@ const App: React.FC = () => {
         topic: query,
         result: data,
         timelineImage: null,
+        literatureReview: null,
         config: config
       };
       setCurrentResearchId(newId);
@@ -123,7 +129,14 @@ const App: React.FC = () => {
   const handleTimelineGenerated = (url: string) => {
     setTimelineImage(url);
     if (currentResearchId) {
-      updateHistoryImage(currentResearchId, url);
+      updateHistoryItem(currentResearchId, { timelineImage: url });
+    }
+  };
+
+  const handleReviewGenerated = (review: string) => {
+    setLiteratureReview(review);
+    if (currentResearchId) {
+       updateHistoryItem(currentResearchId, { literatureReview: review });
     }
   };
 
@@ -141,6 +154,11 @@ const App: React.FC = () => {
       content += `## Visual Timeline\n`;
       // Embed base64 image directly in markdown
       content += `![Timeline of ${result.topic}](${timelineImage})\n\n`;
+    }
+
+    if (literatureReview) {
+      content += `## Literature Review\n\n`;
+      content += `${literatureReview}\n\n`;
     }
 
     content += `## Seminal & Important Articles\n\n`;
@@ -408,6 +426,16 @@ const App: React.FC = () => {
                   </div>
                 ))}
               </div>
+            </section>
+
+            {/* Literature Review Section */}
+            <section>
+               <LiteratureReviewSection 
+                 result={result} 
+                 language={config.language}
+                 existingReview={literatureReview}
+                 onReviewGenerated={handleReviewGenerated}
+               />
             </section>
 
             {/* Chat Widget Integration (Web only) */}

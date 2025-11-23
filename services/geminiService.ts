@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { ResearchResult, ImageSize, ResearchConfig, Language } from "../types";
+import { ResearchResult, ImageSize, ResearchConfig, Language, CitationStyle } from "../types";
 
 // Helper to extract JSON from mixed text output
 const cleanJson = (text: string) => {
@@ -131,6 +131,105 @@ export const researchTopic = async (topic: string, config: ResearchConfig): Prom
     return data;
   } catch (error) {
     console.error("Research failed:", error);
+    throw error;
+  }
+};
+
+export const generateLiteratureReview = async (
+  result: ResearchResult, 
+  language: Language,
+  citationStyle: CitationStyle
+): Promise<string> => {
+  if (!process.env.API_KEY) {
+    throw new Error("API Key is missing");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const modelId = "gemini-3-pro-preview";
+  
+  const languageNames: Record<Language, string> = {
+    'en': 'English',
+    'zh': 'Chinese (Simplified)',
+    'ja': 'Japanese'
+  };
+  const targetLang = languageNames[language];
+
+  const articleList = result.articles.map((a, i) => `
+    [${i+1}] Title: ${a.title}
+    Authors: ${a.authors}
+    Journal: ${a.journal}
+    Year: ${a.publication_date}
+    Summary: ${a.ai_summary}
+    Significance: ${a.significance}
+  `).join('\n');
+
+  let styleInstruction = "";
+  switch(citationStyle) {
+    case 'ieee':
+      styleInstruction = `CITATION STYLE: IEEE (Numeric).
+      - Use numeric citations in square brackets like [1], [2] in the text.
+      - CRITICAL: The References list MUST be sorted by the order of appearance in the text (Citation Order), NOT alphabetically.
+      - The References section MUST be a numbered list corresponding to the appearance order.`;
+      break;
+    case 'mla':
+      styleInstruction = `CITATION STYLE: MLA.
+      - Use (Author Page) or (Author) style in text.
+      - References should be labeled "Works Cited" and formatted in MLA style (Alphabetical).`;
+      break;
+    case 'harvard':
+      styleInstruction = `CITATION STYLE: Harvard.
+      - Use (Author, Year) in text.
+      - References should be alphabetical and formatted in Harvard style.`;
+      break;
+    case 'apa':
+    default:
+      styleInstruction = `CITATION STYLE: APA 7th Edition.
+      - Use (Author, Year) in text.
+      - References should be labeled "References" and formatted in APA 7th style (Alphabetical).`;
+      break;
+  }
+
+  const prompt = `
+  Write a high-quality academic Literature Review based ONLY on the provided articles about "${result.topic}".
+
+  LANGUAGE: Write the review in ${targetLang}.
+
+  ${styleInstruction}
+
+  STRUCTURE:
+  1. Title (Top of page)
+  2. Introduction: Define the scope and importance of the topic.
+  3. Thematic Analysis: Synthesize the papers by themes, methodology, or chronological evolution. DO NOT just list them one by one. Compare and contrast findings.
+  4. Conclusion: Summarize the state of the field and potential future directions.
+  5. References / Works Cited: 
+     - Strictly formatted as a MARKDOWN LIST (e.g., "1. [1] Author..." or "- Author..."). 
+     - ENSURE every reference starts on a NEW LINE. 
+     - Do NOT group them into a single paragraph.
+
+  SOURCE DATA:
+  ${articleList}
+  `;
+
+  const systemInstruction = `You are an expert academic writer specializing in literature reviews. 
+  You write in a formal, objective, and synthesized manner.
+  You strictly follow the requested citation style.
+  For IEEE style, you STRICTLY respect the order of appearance for the bibliography.
+  You do not hallucinate sources outside of the provided list.
+  Return the output in Markdown format.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: modelId,
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction,
+        thinkingConfig: { thinkingBudget: 16000 }, // Enable thinking for synthesis
+      },
+    });
+
+    return response.text || "Failed to generate literature review.";
+  } catch (error) {
+    console.error("Literature review generation failed:", error);
     throw error;
   }
 };

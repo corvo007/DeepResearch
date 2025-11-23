@@ -27,6 +27,7 @@ export interface ImageGenerationState {
 
 export type ResearchFocus = 'classic' | 'balanced' | 'recent';
 export type ArticleCount = 10 | 20 | 30;
+export type CitationStyle = 'apa' | 'ieee' | 'mla' | 'harvard';
 
 export interface ResearchConfig {
   focus: ResearchFocus;
@@ -40,5 +41,6 @@ export interface HistoryItem {
   topic: string;
   result: ResearchResult;
   timelineImage: string | null;
+  literatureReview: string | null;
   config: ResearchConfig;
 }

@@ -150,18 +150,18 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ researchResult }) => {
                 `}
               >
                 {msg.role === 'model' ? (
-                   <ReactMarkdown 
-                    className="prose prose-sm prose-slate max-w-none
+                   <div className="prose prose-sm prose-slate max-w-none
                       prose-headings:font-bold prose-headings:text-slate-800 prose-headings:mt-2 prose-headings:mb-1
                       prose-p:my-1 
                       prose-li:my-0
                       prose-ul:my-2 prose-ul:list-disc prose-ul:pl-4
                       prose-ol:my-2 prose-ol:list-decimal prose-ol:pl-4
                       prose-strong:text-slate-900 prose-strong:font-semibold
-                    "
-                   >
-                     {msg.text}
-                   </ReactMarkdown>
+                    ">
+                     <ReactMarkdown>
+                       {msg.text}
+                     </ReactMarkdown>
+                   </div>
                 ) : (
                   <span className="whitespace-pre-wrap">{msg.text}</span>
                 )}
