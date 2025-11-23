@@ -159,8 +159,9 @@ export const generateLiteratureReview = async (
     Authors: ${a.authors}
     Journal: ${a.journal}
     Year: ${a.publication_date}
-    Summary: ${a.ai_summary}
+    Provided_AI_Summary: ${a.ai_summary}
     Significance: ${a.significance}
+    URL: ${a.url}
   `).join('\n');
 
   let styleInstruction = "";
@@ -190,9 +191,16 @@ export const generateLiteratureReview = async (
   }
 
   const prompt = `
-  Write a high-quality academic Literature Review based ONLY on the provided articles about "${result.topic}".
+  Write a high-quality academic Literature Review based on the articles about "${result.topic}".
 
   LANGUAGE: Write the review in ${targetLang}.
+
+  CRITICAL CONTENT INSTRUCTION:
+  You have access to Google Search tools.
+  For each article listed below:
+  1. ATTEMPT TO RETRIEVE FULL TEXT: Use the provided URL or search the title to find the full text or detailed study findings.
+  2. IF FULL TEXT IS AVAILABLE: Prioritize writing the review based on the deep details from the full text AND the paper's importance/significance.
+  3. IF FULL TEXT IS UNAVAILABLE: **You MUST search for the original abstract of the article.** Write the review based on the retrieved *original abstract* and the paper's importance/significance. Do NOT rely solely on the 'Provided_AI_Summary' field as it is secondary information.
 
   ${styleInstruction}
 
@@ -214,7 +222,7 @@ export const generateLiteratureReview = async (
   You write in a formal, objective, and synthesized manner.
   You strictly follow the requested citation style.
   For IEEE style, you STRICTLY respect the order of appearance for the bibliography.
-  You do not hallucinate sources outside of the provided list.
+  You actively use Google Search to find full text or original abstracts to ensure high-quality, primary-source-based writing.
   Return the output in Markdown format.`;
 
   try {
@@ -223,6 +231,7 @@ export const generateLiteratureReview = async (
       contents: prompt,
       config: {
         systemInstruction: systemInstruction,
+        tools: [{ googleSearch: {} }], // Enable search to find full text/details
         thinkingConfig: { thinkingBudget: 16000 }, // Enable thinking for synthesis
       },
     });
