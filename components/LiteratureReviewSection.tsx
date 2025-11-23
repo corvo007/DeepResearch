@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ResearchResult, Language, CitationStyle } from '../types';
 import { generateLiteratureReview } from '../services/geminiService';
-import { PenTool, FileCode, FileType, Loader2, Sparkles, SlidersHorizontal } from './Icons';
+import { PenTool, FileCode, FileType, Loader2, Sparkles, SlidersHorizontal, RefreshCw } from './Icons';
 import ReactMarkdown from 'react-markdown';
 
 interface LiteratureReviewSectionProps {
@@ -95,18 +95,7 @@ export const LiteratureReviewSection: React.FC<LiteratureReviewSectionProps> = (
       if (trimmed === '') return '';
 
       // Bold/Italic regex replacement (careful with already escaped chars)
-      // We escape text first, then apply bold/italic wrappers
       let content = escapeLatexText(line);
-      // Restore some markdown intent that got escaped? 
-      // Actually, it's safer to escape everything. But let's try to support bold/italic.
-      // The escapeLatexText escapes * and _. So strict markdown to latex is hard without a parser.
-      // Given the user's error was specifically about '&', strictly escaping everything is the safest 
-      // way to ensure it compiles, even if we lose bolding.
-      
-      // However, we can try a smart replace for bold **text** -> \textbf{text} 
-      // by assuming ** didn't contain special chars that needed escaping or handling strictly.
-      // For now, prioritized safety against "Misplaced alignment tab character &".
-      
       return content + '\n';
     });
 
@@ -194,13 +183,13 @@ ${bodyContent}
               onClick={handleGenerate}
               className="w-full px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-900/20"
             >
-              <PenTool size={18} />
-              Generate Review
+              {error ? <RefreshCw size={18} /> : <PenTool size={18} />}
+              {error ? "Retry Generation" : "Generate Review"}
             </button>
           </div>
           
           {error && (
-            <p className="mt-4 text-red-500 bg-red-50 px-4 py-2 rounded text-sm">{error}</p>
+            <p className="mt-4 text-red-500 bg-red-50 px-4 py-2 rounded text-sm text-center">{error}</p>
           )}
         </div>
       )}
@@ -216,6 +205,16 @@ ${bodyContent}
       {existingReview && (
         <div className="animate-fade-in">
           <div className="flex justify-end gap-2 mb-4 print:hidden">
+            <button 
+              onClick={() => onReviewGenerated('')}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors border border-slate-200"
+              title="Regenerate Review"
+            >
+              <RefreshCw size={16} /> Regenerate
+            </button>
+            
+            <div className="w-px bg-slate-200 mx-1"></div>
+
             <button 
               onClick={handleExportMarkdown}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
